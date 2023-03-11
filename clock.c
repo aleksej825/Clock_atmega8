@@ -6,9 +6,11 @@
 #include<util/delay.h>
 #include<stdint.h>
 #include<avr/interrupt.h>
+#include "Seven_seg.h"
+
 unsigned char min = 0;
 unsigned char hours = 0;
-static uint8_t point = 0x80;
+
 
 // Функция инициализация шины TWI
 void I2CInit(void)
@@ -115,77 +117,10 @@ uint8_t DS1307Write(uint8_t address,uint8_t data)
 	I2CStop(); // СТОП
 	return 1;
 }
-// Масив чисел
-unsigned char number[]=
-{
-0x3F,//0
-0x06,//1
-0x5B,//2
-0x4F,//3
-0x66,//4
-0x6D,//5
-0x7D,//6
-0x07,//7
-0x7F,//8
-0x6F //9
-};
 
-volatile unsigned char data1=0;
-volatile unsigned char data2=0;
-volatile unsigned char data3=0;
-volatile unsigned char data4=0;
 
-// Таймер для динамической индикации
-ISR(TIMER0_OVF_vect)	
-{
-static unsigned char clock = 0;
 
-PORTC |=((1<<PC3)|(1<<PC2)|(1<<PC1)|(1<<PC0));
-if(clock==0)
-	{
-	PORTB=number[data4];
-	PORTC &=~(1<<PC3);
-	}
-if(clock==1)
-	{
-	PORTB=number[data3];
-	PORTC &=~(1<<PC2);
-	}
-if(clock==2)
-	{
-	PORTB=number[data2]|point;
-	PORTC&=~(1<<PC1);
-	}
-if(clock==3)
-	{
-	PORTB=number[data1];
-	PORTC &=~(1<<PC0);
-	}
-clock++;
-if(clock==4)
-	clock=0;
-TIFR|=1<<TOV0;
-}
-// Таймер для точки
 
-ISR(TIMER2_OVF_vect)	
-	{
-	static uint8_t clock = 0;	
-
-if(clock==33)
-{
-	point = 0x00;
- 	
-}
-if(clock==66)
-{
-	point = 0x80;
-	clock=0;
-}
-
-TIFR|=1<<TOV2;
-
-	}
 
 int main(void)
 {
@@ -243,11 +178,8 @@ min = (((temp & 0xF0) >> 4)*10)+(temp & 0x0F);
 
 DS1307Read(0x02,&temp); // Чтение регистра часов
 hours = (((temp & 0xF0) >> 4)*10)+(temp & 0x0F);
-		  
-data1=hours/10;
-data2=hours%10;
-data3=min/10;
-data4=min%10;
+		 
+SetValue(hours, min); 
 
 // Изменение времени с помощью кнопки 
 
